@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generalist Editor with Three.js</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            background-color: #f0f0f0;
+        }
+        .controls {
+            width: 300px;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            height: 100vh;
+        }
+        .editor-section {
+            margin-bottom: 20px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        label {
+            display: block;
+            margin: 5px 0;
+        }
+        select, input[type="range"], input[type="color"], input[type="file"] {
+            width: 100%;
+            max-width: 200px;
+        }
+        #canvas {
+            flex-grow: 1;
+            height: 100vh;
+        }
+        button {
+            padding: 10px;
+            width: 100%;
+            max-width: 200px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #directoryList, #textureList {
+            list-style: none;
+            padding: 0;
+        }
+        #directoryList li, #textureList li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px;
+            background-color: #f9f9f9;
+            margin-bottom: 5px;
+        }
+        #directoryList li button, #textureList li button {
+            padding: 2px 5px;
+            width: auto;
+            background-color: #ff4444;
+        }
+        #directoryList li button:hover, #textureList li button:hover {
+            background-color: #cc0000;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <h1>Generalist Editor</h1>
+
+        <!-- Background Color Control -->
+        <div class="editor-section">
+            <h2>Background</h2>
+            <label>Color: <input type="color" value="#f0f0f0" id="backgroundColor"></label>
+        </div>
+
+        <!-- GLTF Upload -->
+        <div class="editor-section">
+            <h2>Upload GLTF/GLB</h2>
+            <label><input type="file" id="gltfUpload" accept=".gltf,.glb"></label>
+        </div>
+
+        <!-- Texture Upload -->
+        <div class="editor-section">
+            <h2>Upload Texture</h2>
+            <label><input type="file" id="textureUpload" accept="image/*"></label>
+        </div>
+
+        <!-- Directory -->
+        <div class="editor-section">
+            <h2>Geometry Directory</h2>
+            <ul id="directoryList"></ul>
+        </div>
+
+        <!-- Texture Directory -->
+        <div class="editor-section">
+            <h2>Texture Directory</h2>
+            <ul id="textureList"></ul>
+        </div>
+
+        <!-- Parts Container -->
+        <div id="partsContainer">
+            <!-- Part 1 -->
+            <div class="editor-section" id="part1Section" data-part="part1">
+                <h2>Part 1</h2>
+                <label>Type: 
+                    <select id="part1Type">
+                        <option value="default">Default</option>
+                    </select>
+                </label>
+                <label>X: <input type="range" min="-5" max="5" value="0" id="part1X"></label>
+                <label>Y: <input type="range" min="-5" max="5" value="2" id="part1Y"></label>
+                <label>Z: <input type="range" min="-5" max="5" value="0" id="part1Z"></label>
+                <label>Rot X: <input type="range" min="0" max="360" value="0" id="part1RotX"></label>
+                <label>Rot Y: <input type="range" min="0" max="360" value="0" id="part1RotY"></label>
+                <label>Rot Z: <input type="range" min="0" max="360" value="0" id="part1RotZ"></label>
+                <label>Scale X: <input type="range" min="0.1" max="2" step="0.1" value="1" id="part1ScaleX"></label>
+                <label>Scale Y: <input type="range" min="0.1" max="2" step="0.1" value="1" id="part1ScaleY"></label>
+                <label>Scale Z: <input type="range" min="0.1" max="2" step="0.1" value="1" id="part1ScaleZ"></label>
+                <label>Pattern: 
+                    <select id="part1Pattern">
+                        <option value="none">None</option>
+                        <option value="mesh">Mesh</option>
+                        <option value="grid">Grid</option>
+                        <option value="stars">Stars</option>
+                    </select>
+                </label>
+                <label>Color: <input type="color" value="#ff0000" id="part1Color"></label>
+            </div>
+
+            <!-- Part 2 -->
+            <div class="editor-section" id="part2Section" data-part="part2">
+                <h2>Part 2</h2>
+                <label>Type: 
+                    <select id="part2Type">
+                        <option value="default">Default</option>
+                    </select>
+                </label>
+                <label>X: <input type="range" min="-5" max="5" value="0" id="part2X"></label>
+                <label>Y: <input type="range" min="-5" max="5" value="-2" id="part2Y"></label>
+                <label>Z: <input type="range" min="-5" max="5" value="0" id="part2Z"></label>
+                <label>Rot X: <input type="range" min="0" max="360" value="0" id="part2RotX"></label>
+                <label>Rot Y: <input type="range" min="0" max="360" value="0" id="part2RotY"></label>
+                <label>Rot Z: <input type="range" min="0" max="360" value="0" id="part2RotZ"></label>
+                <label>Scale X: <input type="range" min="0.1" max="2" step="0.1" value="1" id="part2ScaleX"></label>
+                <label>Scale Y: <input type="range" min="0.1" max="2" step="0.1" value="1" id="part2ScaleY"></label>
+                <label>Scale Z: <input type="range" min="0.1" max="2" step="0.1" value="1" id="part2ScaleZ"></label>
+                <label>Pattern: 
+                    <select id="part2Pattern">
+                        <option value="none">None</option>
+                        <option value="mesh">Mesh</option>
+                        <option value="grid">Grid</option>
+                        <option value="stars">Stars</option>
+                    </select>
+                </label>
+                <label>Color: <input type="color" value="#0000ff" id="part2Color"></label>
+            </div>
+        </div>
+
+        <!-- Add Part Button -->
+        <div class="editor-section">
+            <button id="addPartButton">Add Part</button>
+        </div>
+
+        <!-- Export Button -->
+        <div class="editor-section">
+            <button id="exportButton">Export as GLTF</button>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <!-- GLTF Exporter -->
+    <script src="https://unpkg.com/three@0.134.0/examples/js/exporters/GLTFExporter.js"></script>
+    <!-- GLTF Loader -->
+    <script src="https://unpkg.com/three@0.134.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script>
+        // Three.js Setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, (window.innerWidth - 300) / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), antialias: true });
+        renderer.setSize(window.innerWidth - 300, window.innerHeight);
+        renderer.setClearColor(0xf0f0f0);
+        scene.background = new THREE.Color(0xf0f0f0);
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth - 300, window.innerHeight);
+            camera.aspect = (window.innerWidth - 300) / window.innerHeight;
+            camera.updateProjectionMatrix();
+        });
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        directionalLight.position.set(5, 5, 5);
+        scene.add(directionalLight);
+
+        // Group for the whole generalist
+        const generalistGroup = new THREE.Group();
+        scene.add(generalistGroup);
+
+        // Texture Loader with Simple Canvas Textures
+        const textureLoader = new THREE.TextureLoader();
+        const textures = {
+            none: null,
+            mesh: createSimpleTexture('#888888', (ctx) => {
+                ctx.strokeStyle = '#ffffff';
+                for (let i = 0; i < 256; i += 32) {
+                    ctx.beginPath();
+                    ctx.moveTo(i, 0);
+                    ctx.lineTo(256 - i, 256);
+                    ctx.stroke();
+                }
+            }),
+            grid: createSimpleTexture('#888888', (ctx) => {
+                ctx.strokeStyle = '#ffffff';
+                for (let i = 0; i < 256; i += 32) {
+                    ctx.beginPath();
+                    ctx.moveTo(i, 0);
+                    ctx.lineTo(i, 256);
+                    ctx.moveTo(0, i);
+                    ctx.lineTo(256, i);
+                    ctx.stroke();
+                }
+            }),
+            stars: createSimpleTexture('#222222', (ctx) => {
+                ctx.fillStyle = '#ffffff';
+                for (let i = 0; i < 50; i++) {
+                    const x = Math.random() * 256;
+                    const y = Math.random() * 256;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            })
+        };
+
+        function createSimpleTexture(baseColor, drawFunc) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = baseColor;
+            ctx.fillRect(0, 0, 256, 256);
+            drawFunc(ctx);
+            return textureLoader.load(canvas.toDataURL());
+        }
+
+        // Geometries
+        const geometries = {
+            all: {
+                default: new THREE.BoxBufferGeometry(1, 1, 1)
+            },
+            custom: {}
+        };
+
+        // Parts Management
+        const parts = [];
+        const editorMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xffffff, 
+            map: null, 
+            side: THREE.DoubleSide, 
+            vertexColors: false,
+            metalness: 0.5,
+            roughness: 0.5
+        });
+
+        function createPart(id, initialGeometry) {
+            const mesh = new THREE.Mesh(initialGeometry, editorMaterial.clone());
+            mesh.name = id;
+            generalistGroup.add(mesh);
+            parts.push(mesh);
+            updatePart(mesh, `${id}X`, `${id}Y`, `${id}Z`, `${id}RotX`, `${id}RotY`, `${id}RotZ`, `${id}ScaleX`, `${id}ScaleY`, `${id}ScaleZ`, `${id}Color`, `${id}Pattern`, `${id}Type`, 'all');
+            return mesh;
+        }
+
+        // Initial Parts
+        createPart('part1', geometries.all.default);
+        createPart('part2', geometries.all.default);
+
+        // Add Part Dynamically
+        let partCount = 2;
+        document.getElementById('addPartButton').addEventListener('click', () => {
+            partCount++;
+            const id = `part${partCount}`;
+            const section = document.createElement('div');
+            section.className = 'editor-section';
+            section.id = `${id}Section`;
+            section.dataset.part = id;
+            section.innerHTML = `
+                <h2>Part ${partCount}</h2>
+                <label>Type: 
+                    <select id="${id}Type">
+                        <option value="default">Default</option>
+                    </select>
+                </label>
+                <label>X: <input type="range" min="-5" max="5" value="0" id="${id}X"></label>
+                <label>Y: <input type="range" min="-5" max="5" value="0" id="${id}Y"></label>
+                <label>Z: <input type="range" min="-5" max="5" value="0" id="${id}Z"></label>
+                <label>Rot X: <input type="range" min="0" max="360" value="0" id="${id}RotX"></label>
+                <label>Rot Y: <input type="range" min="0" max="360" value="0" id="${id}RotY"></label>
+                <label>Rot Z: <input type="range" min="0" max="360" value="0" id="${id}RotZ"></label>
+                <label>Scale X: <input type="range" min="0.1" max="2" step="0.1" value="1" id="${id}ScaleX"></label>
+                <label>Scale Y: <input type="range" min="0.1" max="2" step="0.1" value="1" id="${id}ScaleY"></label>
+                <label>Scale Z: <input type="range" min="0.1" max="2" step="0.1" value="1" id="${id}ScaleZ"></label>
+                <label>Pattern: 
+                    <select id="${id}Pattern">
+                        <option value="none">None</option>
+                        <option value="mesh">Mesh</option>
+                        <option value="grid">Grid</option>
+                        <option value="stars">Stars</option>
+                    </select>
+                </label>
+                <label>Color: <input type="color" value="#${Math.floor(Math.random()*16777215).toString(16)}" id="${id}Color"></label>
+            `;
+            document.getElementById('partsContainer').appendChild(section);
+            createPart(id, geometries.all.default);
+            updateTypeSelects();
+            updatePatternSelects();
+            addEventListenersForPart(id);
+        });
+
+        function addEventListenersForPart(id) {
+            document.querySelectorAll(`#${id}Type, #${id}X, #${id}Y, #${id}Z, #${id}RotX, #${id}RotY, #${id}RotZ, #${id}ScaleX, #${id}ScaleY, #${id}ScaleZ, #${id}Color, #${id}Pattern`).forEach(element => {
+                element.addEventListener('input', () => updateAllParts());
+            });
+        }
+
+        // Directory Management (Geometries)
+        const directory = [];
+        const directoryList = document.getElementById('directoryList');
+
+        function updateDirectory() {
+            directoryList.innerHTML = '';
+            directory.forEach((item, index) => {
+                const li = document.createElement('li');
+                const span = document.createElement('span');
+                span.textContent = item.name;
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Delete';
+                deleteButton.addEventListener('click', () => {
+                    delete geometries.custom[item.name];
+                    directory.splice(index, 1);
+                    updateTypeSelects();
+                    updateDirectory();
+                });
+                li.appendChild(span);
+                li.appendChild(deleteButton);
+                directoryList.appendChild(li);
+            });
+            updateTypeSelects();
+        }
+
+        function updateTypeSelects() {
+            const selects = document.querySelectorAll('select[id$="Type"]');
+            selects.forEach(select => {
+                const currentValue = select.value;
+                select.innerHTML = '';
+                for (const type in geometries.all) {
+                    const option = document.createElement('option');
+                    option.value = type;
+                    option.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+                    select.appendChild(option);
+                }
+                for (const customName in geometries.custom) {
+                    const option = document.createElement('option');
+                    option.value = customName;
+                    option.textContent = customName;
+                    select.appendChild(option);
+                }
+                select.value = currentValue in geometries.all || currentValue in geometries.custom ? currentValue : select.options[0].value;
+            });
+        }
+
+        // Texture Directory Management
+        const textureDirectory = [];
+        const textureList = document.getElementById('textureList');
+
+        function updateTextureDirectory() {
+            textureList.innerHTML = '';
+            textureDirectory.forEach((item, index) => {
+                const li = document.createElement('li');
+                const span = document.createElement('span');
+                span.textContent = item.name;
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Delete';
+                deleteButton.addEventListener('click', () => {
+                    delete textures[item.name];
+                    textureDirectory.splice(index, 1);
+                    updatePatternSelects();
+                    updateTextureDirectory();
+                });
+                li.appendChild(span);
+                li.appendChild(deleteButton);
+                textureList.appendChild(li);
+            });
+            updatePatternSelects();
+        }
+
+        function updatePatternSelects() {
+            const selects = document.querySelectorAll('select[id$="Pattern"]');
+            selects.forEach(select => {
+                const currentValue = select.value;
+                select.innerHTML = '';
+                const defaultPatterns = ['none', 'mesh', 'grid', 'stars'];
+                defaultPatterns.forEach(pattern => {
+                    const option = document.createElement('option');
+                    option.value = pattern;
+                    option.textContent = pattern.charAt(0).toUpperCase() + pattern.slice(1);
+                    select.appendChild(option);
+                });
+                textureDirectory.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.name;
+                    option.textContent = item.name;
+                    select.appendChild(option);
+                });
+                select.value = currentValue in textures ? currentValue : select.options[0].value;
+            });
+        }
+
+        // GLTF Loader (Add All Meshes as Geometry Options)
+        const gltfLoader = new THREE.GLTFLoader();
+        document.getElementById('gltfUpload').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const url = event.target.result;
+                    gltfLoader.load(url, (gltf) => {
+                        const baseName = file.name.replace(/\.[^/.]+$/, "");
+                        let meshIndex = 0;
+                        gltf.scene.traverse((child) => {
+                            if (child.isMesh) {
+                                const geometry = child.geometry.clone();
+                                geometry.computeVertexNormals();
+                                const uniqueName = `${baseName}_part${meshIndex + 1}`;
+                                geometries.custom[uniqueName] = geometry;
+                                directory.push({ name: uniqueName, url: url });
+                                meshIndex++;
+                            }
+                        });
+                        if (meshIndex === 0) {
+                            console.error('No mesh geometry found in GLTF:', baseName);
+                            alert('Uploaded GLTF has no valid mesh geometry.');
+                        } else {
+                            updateDirectory();
+                        }
+                    }, undefined, (error) => console.error('GLTF Load Error:', error));
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Texture Loader
+        document.getElementById('textureUpload').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const url = event.target.result;
+                    const name = file.name.replace(/\.[^/.]+$/, "");
+                    const texture = textureLoader.load(url, () => {
+                        textures[name] = texture;
+                        textureDirectory.push({ name: name, url: url });
+                        updateTextureDirectory();
+                    }, undefined, (error) => console.error('Texture Load Error:', error));
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Mouse Controls
+        let isDragging = false;
+        let isPanning = false;
+        let previousMouse = { x: 0, y: 0 };
+        const canvasElement = document.getElementById('canvas');
+
+        canvasElement.addEventListener('mousedown', (e) => {
+            if (e.button === 0) {
+                isDragging = true;
+                previousMouse = { x: e.clientX, y: e.clientY };
+            } else if (e.button === 2) {
+                isPanning = true;
+                previousMouse = { x: e.clientX, y: e.clientY };
+            }
+        });
+
+        canvasElement.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const deltaX = e.clientX - previousMouse.x;
+                const deltaY = e.clientY - previousMouse.y;
+                generalistGroup.rotation.y += deltaX * 0.005;
+                generalistGroup.rotation.x += deltaY * 0.005;
+                previousMouse = { x: e.clientX, y: e.clientY };
+            } else if (isPanning) {
+                const deltaX = e.clientX - previousMouse.x;
+                const deltaY = e.clientY - previousMouse.y;
+                generalistGroup.position.x -= deltaX * 0.01;
+                generalistGroup.position.y += deltaY * 0.01;
+                previousMouse = { x: e.clientX, y: e.clientY };
+            }
+        });
+
+        canvasElement.addEventListener('mouseup', () => {
+            isDragging = false;
+            isPanning = false;
+        });
+        canvasElement.addEventListener('mouseleave', () => {
+            isDragging = false;
+            isPanning = false;
+        });
+
+        canvasElement.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            camera.position.z += e.deltaY * 0.01;
+            camera.position.z = Math.max(2, Math.min(10, camera.position.z));
+        });
+
+        canvasElement.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Update Function
+        function updatePart(part, xId, yId, zId, rotXId, rotYId, rotZId, scaleXId, scaleYId, scaleZId, colorId, patternId, typeId, geometryType) {
+            const x = parseFloat(document.getElementById(xId).value);
+            const y = parseFloat(document.getElementById(yId).value);
+            const z = parseFloat(document.getElementById(zId).value);
+            const rotX = document.getElementById(rotXId).value * Math.PI / 180;
+            const rotY = document.getElementById(rotYId).value * Math.PI / 180;
+            const rotZ = document.getElementById(rotZId).value * Math.PI / 180;
+            const scaleX = parseFloat(document.getElementById(scaleXId).value);
+            const scaleY = parseFloat(document.getElementById(scaleYId).value);
+            const scaleZ = parseFloat(document.getElementById(scaleZId).value);
+            const color = document.getElementById(colorId).value;
+            const pattern = document.getElementById(patternId).value;
+            const type = document.getElementById(typeId).value;
+
+            part.position.set(x, y, z);
+            part.rotation.set(rotX, rotY, rotZ);
+            part.scale.set(scaleX, scaleY, scaleZ);
+            part.material.color.set(color);
+            part.material.map = textures[pattern];
+            part.material.needsUpdate = true;
+            part.geometry.dispose();
+            const newGeometry = geometries.custom[type] || geometries[geometryType][type];
+            newGeometry.computeVertexNormals();
+            part.geometry = newGeometry;
+        }
+
+        function updateAllParts() {
+            parts.forEach(part => {
+                const id = part.name;
+                updatePart(part, `${id}X`, `${id}Y`, `${id}Z`, `${id}RotX`, `${id}RotY`, `${id}RotZ`, `${id}ScaleX`, `${id}ScaleY`, `${id}ScaleZ`, `${id}Color`, `${id}Pattern`, `${id}Type`, 'all');
+            });
+        }
+
+        // Background Color Update
+        document.getElementById('backgroundColor').addEventListener('input', (e) => {
+            scene.background = new THREE.Color(e.target.value);
+            renderer.setClearColor(e.target.value);
+        });
+
+        // Event Listeners for Initial Parts
+        document.querySelectorAll('input:not(#backgroundColor):not(#gltfUpload):not(#textureUpload), select').forEach(element => {
+            element.addEventListener('input', () => updateAllParts());
+        });
+
+        // Export as GLTF
+        const exporter = new THREE.GLTFExporter();
+        document.getElementById('exportButton').addEventListener('click', () => {
+            const options = {
+                binary: false,
+                trs: true,
+                embedImages: true,
+                forceIndices: true
+            };
+            exporter.parse(generalistGroup, (gltf) => {
+                const output = JSON.stringify(gltf, null, 2);
+                const blob = new Blob([output], { type: 'application/octet-stream' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'generalist.gltf';
+                link.click();
+                console.log('Exported GLTF:', gltf);
+            }, (error) => {
+                console.error('Export Error:', error);
+                alert('Failed to export GLTF. Check console for details.');
+            }, options);
+        });
+
+        camera.position.z = 5;
+    </script>
+</body>
+</html>
